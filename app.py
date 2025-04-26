@@ -106,3 +106,20 @@ if __name__ == '__main__':
     init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+@app.route('/add', methods=['POST'])
+def add_wash():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    date = request.form['date']
+    station = request.form['station']
+    wash_type = request.form['wash_type']
+    water = request.form['water']
+    products = request.form['products']
+    energy = request.form['energy']
+    cursor.execute('''
+        INSERT INTO washes (date, station, wash_type, water, products, energy)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (date, station, wash_type, water, products, energy))
+    conn.commit()
+    conn.close()
+    return redirect('/dashboard')
