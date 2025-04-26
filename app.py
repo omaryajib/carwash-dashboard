@@ -138,3 +138,17 @@ if __name__ == '__main__':
     create_users_table()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
+@app.route('/users')
+def show_users():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM users')
+    users = cursor.fetchall()
+    conn.close()
+
+    output = '<h1>All Users</h1><ul>'
+    for user in users:
+        output += f'<li>Username: {user[0]}, Password: {user[1]}</li>'
+    output += '</ul>'
+    return output
