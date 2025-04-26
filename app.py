@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_file, Response
+from flask import Flask, render_template, request, redirect, session, Response
 import sqlite3
 import os
 import csv
@@ -8,39 +8,25 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = 'secret_key'
 
-# Initialize DB
+# Initialize DB with users
 def init_db():
     conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS washes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            station TEXT,
-            wash_type TEXT,
-            water INTEGER,
-            product TEXT,
-            energy INTEGER,
-            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-# Create Users Table
-def create_users_table():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             password TEXT NOT NULL
         )
     ''')
+    # Ajouter utilisateur test si la table est vide
+    cursor.execute('SELECT COUNT(*) FROM users')
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', ('admin', 'admin'))
     conn.commit()
     conn.close()
 
-# Decorator for login
+# Login required decorator
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -49,117 +35,74 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Home redirects to dashboard
+@app.route('/')
+def home():
+    return redirect('/dashboard')
+
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        conn = sqlite3.connect('database.db')
-        c = conn.cursor()
         username = request.form['username']
         password = request.form['password']
-        c.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
-        user = c.fetchone()
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+        user = cursor.fetchone()
         conn.close()
         if user:
             session['logged_in'] = True
             return redirect('/dashboard')
         else:
-            return 'Invalid Credentials'
+            return "Invalid Credentials"
     return render_template('login.html')
 
-# Logout route
-@app.route('/logout')
-@login_required
-def logout():
-    session.pop('logged_in', None)
-    return redirect('/login')
-
-# Dashboard
+# Dashboard route
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM washes')
-    washes = c.fetchall()
-    conn.close()
-    return render_template('dashboard.html', washes=washes)
+    return render_template('dashboard.html')
 
-# Add new wash
-@app.route('/add', methods=['GET', 'POST'])
+# Users list route
+@app.route('/users')
 @login_required
-def add():
-    if request.method == 'POST':
-        station = request.form['station']
-        wash_type = request.form['wash_type']
-        water = request.form['water']
-        products = ', '.join(request.form.getlist('product'))
-        energy = request.form['energy']
-        conn = sqlite3.connect('database.db')
-        c = conn.cursor()
-        c.execute('INSERT INTO washes (station, wash_type, water, product, energy) VALUES (?, ?, ?, ?, ?)',
-                  (station, wash_type, water, products, energy))
-        conn.commit()
-        conn.close()
-        return redirect('/dashboard')
-    return render_template('add.html')
+def users():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM users')
+    users_list = cursor.fetchall()
+    conn.close()
+    output = '<h1>All Users</h1><ul>'
+    for user in users_list:
+        output += f'<li>Username: {user[0]}, Password: {user[1]}</li>'
+    output += '</ul>'
+    return output
 
-# Export to CSV
-@app.route('/export')
+# Export CSV
+@app.route('/export_csv')
 @login_required
 def export_csv():
     conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM washes')
-    washes = c.fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM users')
+    data = cursor.fetchall()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Station', 'Wash Type', 'Water', 'Products', 'Energy', 'Date'])
-    writer.writerows(washes)
-
+    writer.writerow(['Username', 'Password'])
+    writer.writerows(data)
     output.seek(0)
 
     return Response(
-        output,
+        output.getvalue(),
         mimetype='text/csv',
-        headers={"Content-Disposition": "attachment;filename=washes.csv"}
+        headers={"Content-Disposition": "attachment;filename=users.csv"}
     )
-
-# Home redirect to dashboard
-@app.route('/')
-def home():
-    return redirect('/dashboard')
 
 # Run app
 if __name__ == '__main__':
     init_db()
-    create_users_table()
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-
-@app.route('/users')
-def show_users():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM users')
-    users = cursor.fetchall()
-    conn.close()
-
-    output = '<h1>All Users</h1><ul>'
-    for user in users:
-        output += f'<li>Username: {user[0]}, Password: {user[1]}</li>'
-    output += '</ul>'
-    return output
-if __name__ == '__main__':
-    import os
-
-    # Initialize the database (create users table if not exists)
-    init_db()
-
-    # Define the port (5000 by default if not found)
-    port = int(os.environ.get('PORT', 5000))
-
-    # Run the app on all interfaces (important for Render)
     app.run(host='0.0.0.0', port=port)
