@@ -152,3 +152,14 @@ def show_users():
         output += f'<li>Username: {user[0]}, Password: {user[1]}</li>'
     output += '</ul>'
     return output
+if __name__ == '__main__':
+    import os
+
+    # Initialize the database (create users table if not exists)
+    init_db()
+
+    # Define the port (5000 by default if not found)
+    port = int(os.environ.get('PORT', 5000))
+
+    # Run the app on all interfaces (important for Render)
+    app.run(host='0.0.0.0', port=port)
