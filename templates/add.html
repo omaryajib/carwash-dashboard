@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Wash</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="p-4">
+    <div class="container">
+        <h2>Add New Wash</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Date</label>
+                <input type="date" name="date" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Station</label>
+                <select name="station" class="form-select">
+                    <option value="A">Station A</option>
+                    <option value="B">Station B</option>
+                    <option value="C">Station C</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Wash Type</label>
+                <select name="wash_type" class="form-select">
+                    <option value="Exterior">Exterior</option>
+                    <option value="Interior">Interior</option>
+                    <option value="Complete">Complete</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Water Used (L)</label>
+                <input type="number" name="water" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Product Used</label><br>
+                <input type="checkbox" name="product" value="Product 1"> Product 1
+                <input type="checkbox" name="product" value="Product 2"> Product 2
+                <input type="checkbox" name="product" value="Product 3"> Product 3
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Energy Cost (€)</label>
+                <input type="number" name="energy" class="form-control" step="0.01">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Add Wash</button>
+        </form>
+    </div>
+</body>
+</html>
